@@ -63,20 +63,7 @@ export default function DashboardContent({
 
   return (
     <>
-      <div className="mb-8">
-        <h2 className="text-4xl font-bold">
-          Hi,{" "}
-          <span className="text-primary">
-            {userName?.length > 10
-              ? `${userName?.substring(0, 10)}...`
-              : userName?.split(" ")[0] || "there"}
-          </span>
-          !
-        </h2>
-        <p className="text-muted-foreground mt-2 text-lg">
-          Your files are waiting for you.
-        </p>
-      </div>
+      
 
     
           {/* Breadcrumb Navigation */}

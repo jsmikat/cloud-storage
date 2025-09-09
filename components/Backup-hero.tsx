@@ -1,6 +1,5 @@
 
 import { Button } from "@/components/ui/button";
-import { Cloud } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -10,9 +9,8 @@ export default function Home() {
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-50">
         <div className="max-w-5xl mx-auto px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-2">
-              <Cloud className="h-7 w-7 text-black" />
-              <span className="text-xl tracking-wide font-light text-black">CloudVault</span>
+            <div className="flex items-center">
+              <span className="text-xl font-light text-black tracking-wide">CloudVault</span>
             </div>
             <Link href="/login">
               <Button className="bg-black hover:bg-gray-900 text-white rounded-full px-7 py-2 text-sm font-light transition-all duration-300">

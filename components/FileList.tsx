@@ -4,8 +4,8 @@ import FileActionButtons from "@/components/FileActionButtons";
 import FileActions from "@/components/FileActions";
 import FileTabs from "@/components/FileTabs";
 import axios from "axios";
-import { format, formatDistanceToNow } from "date-fns";
-import { ExternalLink, Folder, Star, Trash, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { Star, Trash, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmationModal from "./ConfirmationModal";
@@ -19,8 +19,6 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "./ui/breadcrumb";
-import { Card, CardContent } from "./ui/card";
-import { Separator } from "./ui/separator";
 import {
     Table,
     TableBody,
@@ -50,7 +48,7 @@ type FileType = {
 };
 
 const FileLoadingState = () => (
-  <div className="flex items-center justify-center p-8">
+  <div className="flex items-center justify-center py-12">
     <div className="text-muted-foreground">Loading files...</div>
   </div>
 );
@@ -363,7 +361,7 @@ export default function FileList({
 
   return (
     <div className="space-y-6">
-   
+      {/* Tabs with minimal styling */}
       <FileTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -371,43 +369,40 @@ export default function FileList({
         starredCount={starredCount}
         trashCount={trashCount}
       />
-     
 
-      {/* Folder navigation with breadcrumbs */}
-      {activeTab === "all" && (
-        <div className="space-y-4">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  onClick={() => navigateToPathFolder(-1)}
-                  className={`cursor-pointer ${folderPath.length === 0 ? "font-semibold" : ""}`}
-                >
-                  Home
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              {folderPath.map((folder, index) => (
-                <div key={folder.id} className="flex items-center">
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    {index === folderPath.length - 1 ? (
-                      <BreadcrumbPage className="font-semibold">
-                        {folder.name}
-                      </BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink
-                        onClick={() => navigateToPathFolder(index)}
-                        className="cursor-pointer"
-                      >
-                        {folder.name}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </div>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
+      {/* Breadcrumb navigation - only for all files */}
+      {activeTab === "all" && folderPath.length > 0 && (
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                onClick={() => navigateToPathFolder(-1)}
+                className="cursor-pointer text-muted-foreground hover:text-foreground"
+              >
+                Home
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {folderPath.map((folder, index) => (
+              <div key={folder.id} className="flex items-center">
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  {index === folderPath.length - 1 ? (
+                    <BreadcrumbPage className="font-medium">
+                      {folder.name}
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink
+                      onClick={() => navigateToPathFolder(index)}
+                      className="cursor-pointer text-muted-foreground hover:text-foreground"
+                    >
+                      {folder.name}
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
               </div>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
       )}
 
       {/* Action buttons */}
@@ -419,114 +414,94 @@ export default function FileList({
         onEmptyTrash={() => setEmptyTrashModalOpen(true)}
       />
 
-      <Separator className="my-4" />
-
-      {/* Files table */}
+      {/* Files display */}
       {filteredFiles.length === 0 ? (
         <FileEmptyState activeTab={activeTab} />
       ) : (
-        <Card className="border shadow-sm overflow-hidden">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="hidden sm:table-cell">Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Size</TableHead>
-                    <TableHead className="hidden sm:table-cell">
-                      Added
-                    </TableHead>
-                    <TableHead className="w-16 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFiles.map((file) => (
-                    <TableRow
-                      key={file.id}
-                      className={`hover:bg-muted/50 transition-colors ${
-                        file.isFolder || file.type.startsWith("image/")
-                          ? "cursor-pointer"
-                          : ""
-                      }`}
-                      onClick={() => handleItemClick(file)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <FileIcon file={file} />
-                          <div>
-                            <div className="font-medium flex items-center gap-2">
-                              <span className="truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px]">
-                                {file.name}
-                              </span>
-                              {file.isStarred && (
-                                <Star
-                                  className="h-4 w-4 text-yellow-400"
-                                  fill="currentColor"
-                                />
-                              )}
-                              {file.isFolder && (
-                                <Folder className="h-3 w-3 text-muted-foreground" />
-                              )}
-                              {file.type.startsWith("image/") && (
-                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground sm:hidden">
-                              {formatDistanceToNow(new Date(file.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </div>
-                          </div>
+        <div className="border border-border rounded-lg overflow-hidden">
+          <Table className="w-full">
+            <TableHeader className="bg-muted/30">
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="font-medium text-muted-foreground">Name</TableHead>
+                <TableHead className="hidden sm:table-cell font-medium text-muted-foreground">Type</TableHead>
+                <TableHead className="hidden md:table-cell font-medium text-muted-foreground">Size</TableHead>
+                <TableHead className="hidden sm:table-cell font-medium text-muted-foreground">Modified</TableHead>
+                <TableHead className="w-16 text-right font-medium text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredFiles.map((file) => (
+                <TableRow
+                  key={file.id}
+                  className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
+                    file.isFolder || file.type.startsWith("image/")
+                      ? "cursor-pointer"
+                      : ""
+                  }`}
+                  onClick={() => handleItemClick(file)}
+                >
+                  <TableCell className="py-3">
+                    <div className="flex items-center gap-3">
+                      <FileIcon file={file} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground truncate">
+                            {file.name}
+                          </span>
+                          {file.isStarred && (
+                            <Star
+                              className="h-3.5 w-3.5 text-yellow-500 fill-current flex-shrink-0"
+                            />
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="text-xs text-muted-foreground">
-                          {file.isFolder ? "Folder" : file.type}
+                        <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
+                          {formatDistanceToNow(new Date(file.createdAt), {
+                            addSuffix: true,
+                          })}
                         </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div>
-                          {file.isFolder
-                            ? "-"
-                            : file.size < 1024
-                              ? `${file.size} B`
-                              : file.size < 1024 * 1024
-                                ? `${(file.size / 1024).toFixed(1)} KB`
-                                : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <div>
-                          <div>
-                            {formatDistanceToNow(new Date(file.createdAt), {
-                              addSuffix: true,
-                            })}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(file.createdAt), "MMMM d, yyyy")}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
-                        <FileActions
-                          file={file}
-                          onStar={handleStarFile}
-                          onTrash={handleTrashFile}
-                          onDelete={(file) => {
-                            setSelectedFile(file);
-                            setDeleteModalOpen(true);
-                          }}
-                          onDownload={handleDownloadFile}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell py-3">
+                    <span className="text-sm text-muted-foreground">
+                      {file.isFolder ? "Folder" : file.type.split('/')[0]}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell py-3">
+                    <span className="text-sm text-muted-foreground">
+                      {file.isFolder
+                        ? "—"
+                        : file.size < 1024
+                          ? `${file.size} B`
+                          : file.size < 1024 * 1024
+                            ? `${(file.size / 1024).toFixed(1)} KB`
+                            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell py-3">
+                    <span className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(file.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </span>
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="text-right py-3">
+                    <FileActions
+                      file={file}
+                      onStar={handleStarFile}
+                      onTrash={handleTrashFile}
+                      onDelete={(file) => {
+                        setSelectedFile(file);
+                        setDeleteModalOpen(true);
+                      }}
+                      onDownload={handleDownloadFile}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       <ConfirmationModal
