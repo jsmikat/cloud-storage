@@ -2,7 +2,9 @@ import SignUpForm from '@/components/SignUpForm'
 
 function page() {
   return (
-    <SignUpForm />
+    <div className="flex justify-center items-center min-h-screen">
+      <SignUpForm />
+    </div>
   )
 }
 

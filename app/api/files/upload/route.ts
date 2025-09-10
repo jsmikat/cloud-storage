@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { eq, and } from "drizzle-orm";
-import ImageKit from "imagekit";
-import { v4 as uuidv4 } from "uuid";
 import { db } from "@/database/drizzleClient";
 import { files } from "@/database/schema";
+import { STORAGE_LIMIT_BYTES, formatBytes, wouldExceedLimit } from "@/lib/storageUtils";
+import { and, eq, sum } from "drizzle-orm";
+import ImageKit from "imagekit";
+import { v4 as uuidv4 } from "uuid";
 
 // Initialize ImageKit with your credentials
 const imagekit = new ImageKit({
@@ -13,6 +14,22 @@ const imagekit = new ImageKit({
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
   urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
 });
+
+// Function to get user's current storage usage
+async function getUserStorageUsage(userId: string): Promise<number> {
+  const result = await db
+    .select({ totalSize: sum(files.size) })
+    .from(files)
+    .where(
+      and(
+        eq(files.userId, userId),
+        eq(files.isInTrash, false),
+        eq(files.isFolder, false)
+      )
+    );
+  
+  return result[0]?.totalSize ? Number(result[0].totalSize) : 0;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +50,24 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    // Check user's current storage usage
+    const currentUsage = await getUserStorageUsage(userId);
+    
+    if (wouldExceedLimit(currentUsage, file.size)) {
+      const remainingSpace = STORAGE_LIMIT_BYTES - currentUsage;
+      
+      return NextResponse.json(
+        { 
+          error: `Storage limit exceeded. You've used ${formatBytes(currentUsage)} of ${formatBytes(STORAGE_LIMIT_BYTES)}. This file (${formatBytes(file.size)}) would exceed your storage limit.`,
+          currentUsage,
+          limit: STORAGE_LIMIT_BYTES,
+          fileSize: file.size,
+          remainingSpace: Math.max(0, remainingSpace)
+        },
+        { status: 413 } // 413 Payload Too Large
+      );
     }
 
     // Check if parent folder exists if parentId is provided

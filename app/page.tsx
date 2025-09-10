@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Cloud } from "lucide-react";
+import { CloudUpload } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -11,10 +11,10 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-2">
-              <Cloud className="h-7 w-7 text-black" />
+              <CloudUpload className="h-7 w-7 text-black" />
               <span className="text-xl tracking-wide font-light text-black">CloudVault</span>
             </div>
-            <Link href="/login">
+            <Link href="/sign-in">
               <Button className="bg-black hover:bg-gray-900 text-white rounded-full px-7 py-2 text-sm font-light transition-all duration-300">
                 Get Started
               </Button>
@@ -27,14 +27,14 @@ export default function Home() {
       <section className="pt-32 pb-24">
         <div className="max-w-4xl mx-auto px-8 text-center">
           <h1 className="text-7xl md:text-8xl font-extralight text-black mb-12 leading-[0.85] tracking-tighter">
-            Files,
+            Access your files,
             <br />
-            <span className="text-gray-400">Everywhere.</span>
+            <span className="text-gray-400">Anytime.</span>
           </h1>
           <p className="text-lg text-gray-400 mb-16 max-w-lg mx-auto font-light leading-relaxed">
             Store and access your files from anywhere with effortless simplicity.
           </p>
-          <Link href="/login">
+          <Link href="/sign-in">
             <Button className="bg-black hover:bg-gray-900 text-white rounded-full px-10 py-4 text-base font-light transition-all duration-300 hover:scale-105">
               Start now
             </Button>

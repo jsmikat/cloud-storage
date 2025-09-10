@@ -2,21 +2,22 @@
 
 import axios from "axios";
 import {
-    AlertTriangle,
-    FileUp,
-    FolderPlus,
-    Upload,
-    X,
+  AlertTriangle,
+  FileUp,
+  FolderPlus,
+  Upload,
+  X,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import StorageIndicator from "./StorageIndicator";
 import { Button } from "./ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -43,14 +44,19 @@ export default function FileUploadForm({
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [canUpload, setCanUpload] = useState(true);
+  const [storageUsage, setStorageUsage] = useState<any>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
 
-      // Validate file size (5MB limit)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        setError("File size exceeds 5MB limit");
+      // Check if file would exceed storage limit
+      if (storageUsage && storageUsage.remaining.bytes < selectedFile.size) {
+        setError(`File too large. You have ${storageUsage.remaining.formatted} remaining, but this file is ${(selectedFile.size / (1024 * 1024)).toFixed(2)}MB.`);
+        toast.error("File Too Large", {
+          description: `This file would exceed your storage limit. You have ${storageUsage.remaining.formatted} remaining.`,
+        });
         return;
       }
 
@@ -64,9 +70,12 @@ export default function FileUploadForm({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
 
-      // Validate file size (5MB limit)
-      if (droppedFile.size > 5 * 1024 * 1024) {
-        setError("File size exceeds 5MB limit");
+      // Check if file would exceed storage limit
+      if (storageUsage && storageUsage.remaining.bytes < droppedFile.size) {
+        setError(`File too large. You have ${storageUsage.remaining.formatted} remaining, but this file is ${(droppedFile.size / (1024 * 1024)).toFixed(2)}MB.`);
+        toast.error("File Too Large", {
+          description: `This file would exceed your storage limit. You have ${storageUsage.remaining.formatted} remaining.`,
+        });
         return;
       }
 
@@ -127,12 +136,22 @@ export default function FileUploadForm({
       if (onUploadSuccess) {
         onUploadSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading file:", error);
-      setError("Failed to upload file. Please try again.");
-      toast.error("Upload Failed", {
-        description: "We couldn't upload your file. Please try again.",
-      });
+      
+      // Handle storage limit error specifically
+      if (error.response?.status === 413) {
+        const errorMessage = error.response.data?.error || "Storage limit exceeded";
+        setError(errorMessage);
+        toast.error("Storage Limit Exceeded", {
+          description: errorMessage,
+        });
+      } else {
+        setError("Failed to upload file. Please try again.");
+        toast.error("Upload Failed", {
+          description: "We couldn't upload your file. Please try again.",
+        });
+      }
     } finally {
       setUploading(false);
     }
@@ -193,11 +212,18 @@ export default function FileUploadForm({
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
           className="h-9 text-sm"
+          disabled={!canUpload}
         >
           <Upload className="h-4 w-4 mr-2" />
           Upload Files
         </Button>
       </div>
+
+      {/* Storage Usage Indicator */}
+      <StorageIndicator onStorageUpdate={(usage) => {
+        setCanUpload(usage.canUpload);
+        setStorageUsage(usage);
+      }} />
 
       {/* Simplified file drop area */}
       <div

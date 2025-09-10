@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-import { eq, and } from "drizzle-orm";
-import ImageKit from "imagekit";
 import { db } from "@/database/drizzleClient";
 import { files } from "@/database/schema";
+import { and, eq } from "drizzle-orm";
+import ImageKit from "imagekit";
 
 // Initialize ImageKit with your credentials
 const imagekit = new ImageKit({
@@ -57,7 +57,10 @@ export async function DELETE() {
               });
 
               if (searchResults && searchResults.length > 0) {
-                await imagekit.deleteFile(searchResults[0].fieldId);
+                const result = searchResults[0];
+                if ('fileId' in result) {
+                  await imagekit.deleteFile(result.fileId);
+                }
               } else {
                 await imagekit.deleteFile(imagekitFileId);
               }

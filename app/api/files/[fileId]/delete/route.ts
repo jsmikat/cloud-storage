@@ -14,7 +14,7 @@ const imagekit = new ImageKit({
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { fileId: string } }
+  { params }: { params: Promise<{ fileId: string }> }
 ) {
   try {
     // Check authentication
@@ -23,7 +23,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const fileId = params.fileId;
+    const { fileId } = await params;
 
     // First, check if the file exists and belongs to the user
     const [file] = await db
@@ -57,7 +57,10 @@ export async function DELETE(
             });
 
             if (searchResults && searchResults.length > 0) {
-              await imagekit.deleteFile(searchResults[0].fieldId);
+              const result = searchResults[0];
+              if ('fileId' in result) {
+                await imagekit.deleteFile(result.fileId);
+              }
             } else {
               await imagekit.deleteFile(imagekitFileId);
             }

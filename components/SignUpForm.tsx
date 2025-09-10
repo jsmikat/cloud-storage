@@ -12,12 +12,16 @@ import { z } from "zod";
 import { signUpSchema } from "@/schemas/signUpSchema";
 import {
   AlertCircle,
-  CheckCircle,
   Eye,
   EyeOff
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "./ui/input-otp";
 import { Label } from "./ui/label";
 
 export default function SignUpForm() {
@@ -125,21 +129,49 @@ export default function SignUpForm() {
         )}
 
         <div className="grid gap-6">
-          <form onSubmit={handleVerificationSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="verificationCode">Verification Code</Label>
-              <Input
-                id="verificationCode"
-                type="text"
-                placeholder="Enter the 6-digit code"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                autoFocus
-                disabled={isSubmitting}
-              />
+          <form id="verification-form" onSubmit={handleVerificationSubmit} className="grid gap-4">
+            <div className="grid gap-4">
+              <Label htmlFor="verificationCode" className="text-center">
+                Verification Code
+              </Label>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(value) => {
+                    setVerificationCode(value);
+                    if (value.length === 6 && !isSubmitting) {
+                      setTimeout(() => {
+                        const form = document.getElementById('verification-form') as HTMLFormElement;
+                        if (form) {
+                          form.requestSubmit();
+                        }
+                      }, 100);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Enter the 6-digit code sent to your email
+              </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting || verificationCode.length !== 6}
+            >
               {isSubmitting && (
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               )}
@@ -273,21 +305,6 @@ export default function SignUpForm() {
               <p className="text-sm text-destructive">{errors.passwordConfirmation.message}</p>
             )}
           </div>
-
-          <div className="flex items-start space-x-2 text-sm">
-            <CheckCircle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-muted-foreground">
-              By creating an account, you agree to our{" "}
-              <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
-                Privacy Policy
-              </Link>
-            </p>
-          </div>
-
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && (
               <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
