@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import StorageIndicator from "./StorageIndicator";
+import { LoadingSpinner } from "./ui";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -313,7 +314,7 @@ export default function FileUploadForm({
             >
               {uploading ? (
                 <>
-                  <Upload className="h-4 w-4 mr-2 animate-spin" />
+                  <LoadingSpinner className="h-4 w-4 mr-2" />
                   Uploading...
                 </>
               ) : (

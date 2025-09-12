@@ -1,11 +1,9 @@
 # 🗂️ CloudVault - Modern Cloud Storage Platform
 
-A full-stack cloud storage platform built with Next.js 15, featuring real-time file management, user authentication, and a sleek modern interface inspired by Apple's design principles.
+A full-stack cloud storage platform built with Next.js 15, featuring real-time file management, user authentication, and a sleek modern interface.
 
-![Cloud Storage Platform](https://img.shields.io/badge/Next.js-15.3.2-black?style=for-the-badge&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=for-the-badge&logo=typescript)
-![React](https://img.shields.io/badge/React-19.0+-61DAFB?style=for-the-badge&logo=react)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0+-38B2AC?style=for-the-badge&logo=tailwind-css)
+![ss](./public/CloudVault.png)
+![ss](./public/Dashboard.png)
 
 ## 🌟 Features
 

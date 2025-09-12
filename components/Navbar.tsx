@@ -8,10 +8,10 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
 interface SerializedUser {
@@ -36,8 +36,8 @@ export default function Navbar({ user }: NavbarProps) {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   // Check if we're on the dashboard page
-  const isOnDashboard =
-    pathname === "/dashboard" || pathname?.startsWith("/dashboard/");
+  // const isOnDashboard =
+  //   pathname === "/dashboard" || pathname?.startsWith("/dashboard/");
 
   // Handle scroll effect
   useEffect(() => {
@@ -158,13 +158,13 @@ export default function Navbar({ user }: NavbarProps) {
             {/* Show these when user is signed in */}
             <SignedIn>
               <div className="flex items-center gap-4">
-                {!isOnDashboard && (
+                {/* {(
                   <Link href="/dashboard">
                     <Button variant="outline">
                       Dashboard
                     </Button>
                   </Link>
-                )}
+                )} */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -291,7 +291,7 @@ export default function Navbar({ user }: NavbarProps) {
 
                 {/* Navigation links */}
                 <div className="flex flex-col gap-4">
-                  {!isOnDashboard && (
+                  { (
                     <Link
                       href="/dashboard"
                       className="py-2 px-3 hover:bg-gray-100 rounded-md transition-colors"
