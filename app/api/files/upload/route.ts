@@ -8,7 +8,6 @@ import { and, eq, sum } from "drizzle-orm";
 import ImageKit from "imagekit";
 import { v4 as uuidv4 } from "uuid";
 
-// Initialize ImageKit with your credentials
 const imagekit = new ImageKit({
   publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || "",
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
@@ -92,12 +91,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Only allow image uploads
-    if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-      return NextResponse.json(
-        { error: "Only image files are supported" },
-        { status: 400 }
-      );
-    }
+    // if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+    //   return NextResponse.json(
+    //     { error: "Only image files are supported" },
+    //     { status: 400 }
+    //   );
+    // }
 
     const buffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(buffer);

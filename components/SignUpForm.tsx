@@ -4,18 +4,14 @@ import { useSignUp } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-
+import { getErrorMessage } from "@/lib/formUtils";
 import { signUpSchema } from "@/schemas/signUpSchema";
-import {
-  AlertCircle,
-  Eye,
-  EyeOff
-} from "lucide-react";
 import { Button } from "./ui/button";
+import { ErrorAlert } from "./ui/error-alert";
 import { Input } from "./ui/input";
 import {
   InputOTP,
@@ -23,25 +19,61 @@ import {
   InputOTPSlot,
 } from "./ui/input-otp";
 import { Label } from "./ui/label";
+import { LoadingSpinner } from "./ui/loading-spinner";
+import { PasswordToggle } from "./ui/password-toggle";
 
-export default function SignUpForm() {
-  const router = useRouter();
-  const { signUp, isLoaded, setActive } = useSignUp();
+type SignUpFormData = z.infer<typeof signUpSchema>;
+
+// Custom hook for form state management
+const useSignUpFormState = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
-  const [verificationError, setVerificationError] = useState<string | null>(
-    null
-  );
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const clearErrors = useCallback(() => {
+    setAuthError(null);
+    setVerificationError(null);
+  }, []);
+
+  const resetVerification = useCallback(() => {
+    setVerificationCode("");
+    setVerificationError(null);
+  }, []);
+
+  return {
+    isSubmitting,
+    setIsSubmitting,
+    authError,
+    setAuthError,
+    verifying,
+    setVerifying,
+    verificationCode,
+    setVerificationCode,
+    verificationError,
+    setVerificationError,
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    clearErrors,
+    resetVerification,
+  };
+};
+
+export default function SignUpForm() {
+  const router = useRouter();
+  const { signUp, isLoaded, setActive } = useSignUp();
+  const state = useSignUpFormState();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<z.infer<typeof signUpSchema>>({
+  } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       email: "",
@@ -50,66 +82,106 @@ export default function SignUpForm() {
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
-    if (!isLoaded) return;
+  // Enhanced submit handler with better error handling
+  const onSubmit = useCallback(async (data: SignUpFormData) => {
+    if (!isLoaded || !signUp) return;
 
-    setIsSubmitting(true);
-    setAuthError(null);
+    state.setIsSubmitting(true);
+    state.clearErrors();
 
     try {
+      // Create the user
       await signUp.create({
         emailAddress: data.email,
         password: data.password,
       });
 
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setVerifying(true);
+      // Prepare email verification
+      await signUp.prepareEmailAddressVerification({ 
+        strategy: "email_code" 
+      });
+      
+      state.setVerifying(true);
     } catch (error: any) {
       console.error("Sign-up error:", error);
-      setAuthError(
-        error.errors?.[0]?.message ||
-          "An error occurred during sign-up. Please try again."
-      );
+      const errorMessage = getErrorMessage(error);
+      state.setAuthError(errorMessage);
     } finally {
-      setIsSubmitting(false);
+      state.setIsSubmitting(false);
     }
-  };
+  }, [isLoaded, signUp, state]);
 
-  const handleVerificationSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  // Enhanced verification handler
+  const handleVerificationSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isLoaded || !signUp) return;
 
-    setIsSubmitting(true);
-    setVerificationError(null);
+    state.setIsSubmitting(true);
+    state.setVerificationError(null);
 
     try {
       const result = await signUp.attemptEmailAddressVerification({
-        code: verificationCode,
+        code: state.verificationCode,
       });
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
         router.push("/dashboard");
       } else {
-        console.error("Verification incomplete:", result);
-        setVerificationError(
+        console.error("Verification incomplete:", JSON.stringify(result, null, 2));
+        state.setVerificationError(
           "Verification could not be completed. Please try again."
         );
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      setVerificationError(
-        error.errors?.[0]?.message ||
-          "An error occurred during verification. Please try again."
-      );
+      const errorMessage = getErrorMessage(error);
+      state.setVerificationError(errorMessage);
     } finally {
-      setIsSubmitting(false);
+      state.setIsSubmitting(false);
     }
-  };
+  }, [isLoaded, signUp, setActive, router, state]);
 
-  if (verifying) {
+  // OTP change handler with auto-submit
+  const handleOTPChange = useCallback((value: string) => {
+    state.setVerificationCode(value);
+    
+    // Auto-submit when 6 digits are entered
+    if (value.length === 6 && !state.isSubmitting) {
+      setTimeout(() => {
+        const form = document.getElementById('verification-form') as HTMLFormElement;
+        form?.requestSubmit();
+      }, 100);
+    }
+  }, [state]);
+
+  // Resend verification code
+  const handleResendCode = useCallback(async () => {
+    if (!signUp) return;
+    
+    try {
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+      state.resetVerification();
+    } catch (error: any) {
+      console.error("Resend error:", error);
+      const errorMessage = getErrorMessage(error);
+      state.setVerificationError(errorMessage);
+    }
+  }, [signUp, state]);
+
+  // Password toggle handlers
+  const togglePassword = useCallback(() => {
+    state.setShowPassword(prev => !prev);
+  }, [state]);
+
+  const toggleConfirmPassword = useCallback(() => {
+    state.setShowConfirmPassword(prev => !prev);
+  }, [state]);
+
+  // Verification form JSX
+  if (state.verifying) {
     return (
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
@@ -121,15 +193,14 @@ export default function SignUpForm() {
           </p>
         </div>
 
-        {verificationError && (
-          <div className="flex items-center space-x-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4" />
-            <p>{verificationError}</p>
-          </div>
-        )}
+        <ErrorAlert error={state.verificationError} />
 
         <div className="grid gap-6">
-          <form id="verification-form" onSubmit={handleVerificationSubmit} className="grid gap-4">
+          <form 
+            id="verification-form" 
+            onSubmit={handleVerificationSubmit} 
+            className="grid gap-4"
+          >
             <div className="grid gap-4">
               <Label htmlFor="verificationCode" className="text-center">
                 Verification Code
@@ -137,28 +208,15 @@ export default function SignUpForm() {
               <div className="flex justify-center">
                 <InputOTP
                   maxLength={6}
-                  value={verificationCode}
-                  onChange={(value) => {
-                    setVerificationCode(value);
-                    if (value.length === 6 && !isSubmitting) {
-                      setTimeout(() => {
-                        const form = document.getElementById('verification-form') as HTMLFormElement;
-                        if (form) {
-                          form.requestSubmit();
-                        }
-                      }, 100);
-                    }
-                  }}
-                  disabled={isSubmitting}
+                  value={state.verificationCode}
+                  onChange={handleOTPChange}
+                  disabled={state.isSubmitting}
                   autoFocus
                 >
                   <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
                   </InputOTPGroup>
                 </InputOTP>
               </div>
@@ -170,12 +228,10 @@ export default function SignUpForm() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isSubmitting || verificationCode.length !== 6}
+              disabled={state.isSubmitting || state.verificationCode.length !== 6}
             >
-              {isSubmitting && (
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              )}
-              {isSubmitting ? "Verifying..." : "Verify Email"}
+              {state.isSubmitting && <LoadingSpinner className="mr-2" />}
+              {state.isSubmitting ? "Verifying..." : "Verify Email"}
             </Button>
           </form>
         </div>
@@ -183,14 +239,9 @@ export default function SignUpForm() {
         <p className="px-8 text-center text-sm text-muted-foreground">
           Didn't receive a code?{" "}
           <button
-            onClick={async () => {
-              if (signUp) {
-                await signUp.prepareEmailAddressVerification({
-                  strategy: "email_code",
-                });
-              }
-            }}
+            onClick={handleResendCode}
             className="hover:text-brand underline underline-offset-4"
+            disabled={state.isSubmitting}
           >
             Resend code
           </button>
@@ -199,6 +250,7 @@ export default function SignUpForm() {
     );
   }
 
+  // Main signup form JSX
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
       <div className="flex flex-col space-y-2 text-center">
@@ -210,12 +262,7 @@ export default function SignUpForm() {
         </p>
       </div>
 
-      {authError && (
-        <div className="flex items-center space-x-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          <AlertCircle className="h-4 w-4" />
-          <p>{authError}</p>
-        </div>
-      )}
+      <ErrorAlert error={state.authError} />
 
       <div className="grid gap-6">
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
@@ -229,7 +276,7 @@ export default function SignUpForm() {
               autoComplete="email"
               autoCorrect="off"
               {...register("email")}
-              disabled={isSubmitting}
+              disabled={state.isSubmitting}
             />
             {errors.email && (
               <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -241,30 +288,18 @@ export default function SignUpForm() {
             <div className="relative">
               <Input
                 id="password"
-                type={showPassword ? "text" : "password"}
+                type={state.showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 autoComplete="new-password"
                 {...register("password")}
                 className="pr-10"
-                disabled={isSubmitting}
+                disabled={state.isSubmitting}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                onClick={() => setShowPassword((prev) => !prev)}
-                disabled={isSubmitting}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
+              <PasswordToggle
+                show={state.showPassword}
+                onToggle={togglePassword}
+                disabled={state.isSubmitting}
+              />
             </div>
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
@@ -276,40 +311,29 @@ export default function SignUpForm() {
             <div className="relative">
               <Input
                 id="passwordConfirmation"
-                type={showConfirmPassword ? "text" : "password"}
+                type={state.showConfirmPassword ? "text" : "password"}
                 placeholder="Confirm your password"
                 autoComplete="new-password"
                 {...register("passwordConfirmation")}
                 className="pr-10"
-                disabled={isSubmitting}
+                disabled={state.isSubmitting}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isSubmitting}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showConfirmPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
+              <PasswordToggle
+                show={state.showConfirmPassword}
+                onToggle={toggleConfirmPassword}
+                disabled={state.isSubmitting}
+              />
             </div>
             {errors.passwordConfirmation && (
               <p className="text-sm text-destructive">{errors.passwordConfirmation.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting && (
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
-            {isSubmitting ? "Creating account..." : "Create Account"}
+
+          <div id="clerk-captcha" className="mx-auto"></div>
+          
+          <Button type="submit" className="w-full" disabled={state.isSubmitting}>
+            {state.isSubmitting && <LoadingSpinner className="mr-2" />}
+            {state.isSubmitting ? "Creating account..." : "Create Account"}
           </Button>
         </form>
       </div>

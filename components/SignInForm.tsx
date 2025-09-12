@@ -8,11 +8,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { getErrorMessage } from "@/lib/formUtils";
 import { signInSchema } from "@/schemas/signInSchema";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "./ui/button";
+import { ErrorAlert } from "./ui/error-alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { LoadingSpinner } from "./ui/loading-spinner";
+import { PasswordToggle } from "./ui/password-toggle";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -54,10 +57,8 @@ export default function SignInForm() {
       }
     } catch (error: any) {
       console.error("Sign-in error:", error);
-      setAuthError(
-        error.errors?.[0]?.message ||
-          "An error occurred during sign-in. Please try again."
-      );
+      const errorMessage = getErrorMessage(error);
+      setAuthError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -74,12 +75,7 @@ export default function SignInForm() {
         </p>
       </div>
 
-      {authError && (
-        <div className="flex items-center space-x-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          <AlertCircle className="h-4 w-4" />
-          <p>{authError}</p>
-        </div>
-      )}
+      <ErrorAlert error={authError} />
 
       <div className="grid gap-6">
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
@@ -114,23 +110,11 @@ export default function SignInForm() {
                 className="pr-10"
                 disabled={isSubmitting}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
+              <PasswordToggle
+                show={showPassword}
+                onToggle={() => setShowPassword(!showPassword)}
                 disabled={isSubmitting}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
+              />
             </div>
             {errors.password && (
               <p className="text-sm text-destructive">
@@ -140,9 +124,7 @@ export default function SignInForm() {
           </div>
 
           <Button disabled={isSubmitting} className="w-full">
-            {isSubmitting && (
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
+            {isSubmitting && <LoadingSpinner className="mr-2" />}
             Sign In
           </Button>
         </form>

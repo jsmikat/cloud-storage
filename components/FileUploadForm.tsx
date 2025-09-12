@@ -258,7 +258,6 @@ export default function FileUploadForm({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept="image/*"
             />
           </div>
         ) : (
