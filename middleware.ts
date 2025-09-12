@@ -9,15 +9,17 @@ const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
 export default clerkMiddleware(async (auth, request) => {
   const user = auth();
   const userId = (await user).userId;
-  const url = new URL(request.url);
+  const { pathname } = request.nextUrl;
 
-  if (userId && isPublicRoute(request) && url.pathname === "/") {
+  if (userId && isPublicRoute(request) && (pathname === "/sign-in" || pathname === "/sign-up" || pathname === "/")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (!isPublicRoute(request)) {
     await auth.protect();
   }
+
+  return NextResponse.next();
 });
 
 export const config = {

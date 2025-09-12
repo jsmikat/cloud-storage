@@ -1,34 +1,33 @@
-# 🗂️ CloudVault - Modern Cloud Storage Platform
+# CloudVault
 
 A full-stack cloud storage platform built with Next.js 15, featuring real-time file management, user authentication, and a sleek modern interface.
 
-![ss](./public/CloudVault.png)
 ![ss](./public/Dashboard.png)
 
-## 🌟 Features
+## Features
 
 ### Core Functionality
-- **🔐 Secure Authentication** - Powered by Clerk with email verification and OTP support
-- **📁 File Management** - Upload, organize, star, and delete files with drag-and-drop support
-- **🗂️ Folder Structure** - Create and navigate through nested folder hierarchies
-- **📊 Storage Management** - 50MB per user limit with real-time usage tracking
-- **🗑️ Trash System** - Soft delete with restore functionality
+- **Secure Authentication** - Powered by Clerk with email verification and OTP support
+- **File Management** - Upload, organize, star, and delete files with drag-and-drop support
+- **Folder Structure** - Create and navigate through nested folder hierarchies
+- **Storage Management** - 50MB per user limit with real-time usage tracking
+- **Trash System** - Soft delete with restore functionality
 
 ### User Experience
-- **🎨 Modern UI** - Clean, minimal design inspired by Apple's aesthetics
-- **📱 Responsive Design** - Works seamlessly across desktop, tablet, and mobile
-- **⚡ Real-time Updates** - Instant feedback for all file operations
-- **🎯 Smart Validation** - Pre-upload file size and type validation
-- **📈 Progress Tracking** - Visual upload progress with error handling
+- **Modern UI** - Clean, minimal design inspired by Apple's aesthetics
+- **Responsive Design** - Works seamlessly across desktop, tablet, and mobile
+- **Real-time Updates** - Instant feedback for all file operations
+- **Smart Validation** - Pre-upload file size and type validation
+- **Progress Tracking** - Visual upload progress with error handling
 
 ### Technical Features
-- **🏗️ Type-Safe** - Full TypeScript implementation
-- **🔄 Database Integration** - PostgreSQL with Drizzle ORM
-- **☁️ Cloud Storage** - ImageKit integration for file hosting
-- **🚀 Performance** - Optimized with Next.js 15 and Turbopack
-- **🛡️ Security** - Protected API routes with user authorization
+- **Type-Safe** - Full TypeScript implementation
+- **Database Integration** - PostgreSQL with Drizzle ORM
+- **Cloud Storage** - ImageKit integration for file hosting
+- **Performance** - Optimized with Next.js 15 and Turbopack
+- **Security** - Protected API routes with user authorization
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 cloud-storage/
@@ -54,7 +53,7 @@ cloud-storage/
 └── 📄 Config files            # ENV, TypeScript, Tailwind, etc.
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -67,8 +66,8 @@ cloud-storage/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/cloud-storage.git
-cd cloud-storage
+git clone https://github.com/jsmikat/CloudVault.git
+cd CloudVault
 ```
 
 ### 2. Install Dependencies
@@ -153,7 +152,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see your application run
 - **[Prettier](https://prettier.io/)** - Code formatting
 - **[Drizzle Kit](https://orm.drizzle.team/kit-docs/overview)** - Database migrations
 
-## 📋 Available Scripts
+## Available Scripts
 
 ```bash
 # Development
@@ -168,29 +167,7 @@ pnpm db:migrate   # Run database migrations
 pnpm db:studio    # Open Drizzle Studio (database GUI)
 ```
 
-## 🏗️ Key Architecture Decisions
-
-### Storage Management
-- **50MB Limit**: Each user gets 50MB of storage space
-- **Real-time Tracking**: Storage usage is calculated and displayed in real-time
-- **Pre-upload Validation**: Files are validated before upload to prevent exceeding limits
-
-### File Organization
-- **Hierarchical Structure**: Support for nested folders and files
-- **Soft Deletes**: Files are moved to trash before permanent deletion
-- **Metadata Storage**: File information stored in PostgreSQL for fast queries
-
-### Security
-- **Route Protection**: All API routes are protected with Clerk authentication
-- **User Isolation**: Users can only access their own files and folders
-- **Input Validation**: All inputs are validated using Zod schemas
-
-### Performance
-- **Optimistic Updates**: UI updates immediately with server reconciliation
-- **Lazy Loading**: Components and data are loaded on-demand
-- **Caching**: Strategic caching for improved performance
-
-## 🔧 API Endpoints
+## API Endpoints
 
 ### File Management
 - `GET /api/files` - List user files and folders
@@ -210,7 +187,7 @@ pnpm db:studio    # Open Drizzle Studio (database GUI)
 - `GET /api/imagekit-auth` - Get ImageKit authentication token
 
 
-## 📝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -218,6 +195,6 @@ pnpm db:studio    # Open Drizzle Studio (database GUI)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

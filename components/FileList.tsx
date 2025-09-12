@@ -5,7 +5,7 @@ import FileActions from "@/components/FileActions";
 import FileTabs from "@/components/FileTabs";
 import axios from "axios";
 import { formatDistanceToNow } from "date-fns";
-import { Star, Trash, X } from "lucide-react";
+import { Home, Star, Trash, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ConfirmationModal from "./ConfirmationModal";
@@ -57,18 +57,19 @@ const FileLoadingState = () => (
 interface FileListProps {
   userId: string;
   refreshTrigger?: number;
-  onFolderChange?: (folderId: string | null) => void;
+  currentFolder?: string | null;
+  onFolderChange?: (folderId: string | null, path?: Array<{ id: string; name: string }>) => void;
 }
 
 export default function FileList({
   userId,
   refreshTrigger = 0,
+  currentFolder = null,
   onFolderChange,
 }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -97,7 +98,6 @@ export default function FileList({
     }
   };
 
-  // Fetch files when userId, refreshTrigger, or currentFolder changes
   useEffect(() => {
     fetchFiles();
   }, [userId, refreshTrigger, currentFolder]);
@@ -286,23 +286,23 @@ export default function FileList({
   };
 
   // Function to open image in a new tab with optimized view
-  const openImageViewer = (file: any) => {
-    if (file.type.startsWith("image/")) {
+  const openFileViewer = (file: any) => {
+    // if (file.type.startsWith("image/")) {
       // Create an optimized URL with ImageKit transformations for viewing
       // Using higher quality and responsive sizing for better viewing experience
-      const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/tr:q-90,w-1600,h-1200,fo-auto/${file.path}`;
+      const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/${file.path}`;
       window.open(optimizedUrl, "_blank");
-    }
+    // }
   };
 
   // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
-    setCurrentFolder(folderId);
-    setFolderPath([...folderPath, { id: folderId, name: folderName }]);
+    const newPath = [...folderPath, { id: folderId, name: folderName }];
+    setFolderPath(newPath);
 
     // Notify parent component about folder change
     if (onFolderChange) {
-      onFolderChange(folderId);
+      onFolderChange(folderId, newPath);
     }
   };
 
@@ -314,11 +314,10 @@ export default function FileList({
       setFolderPath(newPath);
       const newFolderId =
         newPath.length > 0 ? newPath[newPath.length - 1].id : null;
-      setCurrentFolder(newFolderId);
 
       // Notify parent component about folder change
       if (onFolderChange) {
-        onFolderChange(newFolderId);
+        onFolderChange(newFolderId, newPath);
       }
     }
   };
@@ -326,32 +325,32 @@ export default function FileList({
   // Navigate to specific folder in path
   const navigateToPathFolder = (index: number) => {
     if (index < 0) {
-      setCurrentFolder(null);
       setFolderPath([]);
 
       // Notify parent component about folder change
       if (onFolderChange) {
-        onFolderChange(null);
+        onFolderChange(null, []);
       }
     } else {
       const newPath = folderPath.slice(0, index + 1);
       setFolderPath(newPath);
       const newFolderId = newPath[newPath.length - 1].id;
-      setCurrentFolder(newFolderId);
 
       // Notify parent component about folder change
       if (onFolderChange) {
-        onFolderChange(newFolderId);
+        onFolderChange(newFolderId, newPath);
       }
     }
   };
 
   // Handle file or folder click
-  const handleItemClick = (file: any) => {
+  const handleItemClick = (file: any, event: React.MouseEvent ) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (file.isFolder) {
       navigateToFolder(file.id, file.name);
-    } else if (file.type.startsWith("image/")) {
-      openImageViewer(file);
+    } else{
+      openFileViewer(file);
     }
   };
 
@@ -361,7 +360,6 @@ export default function FileList({
 
   return (
     <div className="space-y-6">
-      {/* Tabs with minimal styling */}
       <FileTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -370,15 +368,14 @@ export default function FileList({
         trashCount={trashCount}
       />
 
-      {/* Breadcrumb navigation - only for all files */}
       {activeTab === "all" && folderPath.length > 0 && (
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
                 onClick={() => navigateToPathFolder(-1)}
-                className="cursor-pointer text-muted-foreground hover:text-foreground"
-              >
+                className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+              ><Home className="h-4 w-4 mr-1 inline-block" />
                 Home
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -434,11 +431,11 @@ export default function FileList({
                 <TableRow
                   key={file.id}
                   className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
-                    file.isFolder || file.type.startsWith("image/")
+                    file.isFolder || file
                       ? "cursor-pointer"
                       : ""
                   }`}
-                  onClick={() => handleItemClick(file)}
+                  onClick={(event) => handleItemClick(file, event)}
                 >
                   <TableCell className="py-3">
                     <div className="flex items-center gap-3">

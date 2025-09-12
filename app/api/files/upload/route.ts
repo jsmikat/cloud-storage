@@ -14,7 +14,6 @@ const imagekit = new ImageKit({
   urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
 });
 
-// Function to get user's current storage usage
 async function getUserStorageUsage(userId: string): Promise<number> {
   const result = await db
     .select({ totalSize: sum(files.size) })
@@ -42,7 +41,6 @@ export async function POST(request: NextRequest) {
     const formUserId = formData.get("userId") as string;
     const parentId = (formData.get("parentId") as string) || null;
 
-    // Verify the user is uploading to their own account
     if (formUserId !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -51,7 +49,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Check user's current storage usage
     const currentUsage = await getUserStorageUsage(userId);
     
     if (wouldExceedLimit(currentUsage, file.size)) {
@@ -69,7 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if parent folder exists if parentId is provided
     if (parentId) {
       const [parentFolder] = await db
         .select()
