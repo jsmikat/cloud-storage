@@ -2,21 +2,32 @@
 
 import FileList from "@/components/FileList";
 import FileUploadForm from "@/components/FileUploadForm";
-import { FileText, FileUp, Home } from "lucide-react";
-import React, { useCallback, useState } from "react";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "./ui/breadcrumb";
+import { useUrlBasedNavigation } from "@/hooks/useUrlBasedNavigation";
+import { FileText, FileUp } from "lucide-react";
+import { useCallback, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
 interface FileSectionProps {
   userId: string;
 }
+
+// File type interface for proper typing
+type FileType = {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  type: string;
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  userId: string;
+  parentId: string | null;
+  isFolder: boolean;
+  isStarred: boolean;
+  isInTrash: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 // Folder data interface
 interface FolderData {
@@ -27,30 +38,28 @@ interface FolderData {
 
 export default function FileSection({ userId }: FileSectionProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
-  const [folderPath, setFolderPath] = useState<FolderData[]>([]);
+  
+  // Use URL-based navigation for browser back/forward support
+  const navigation = useUrlBasedNavigation({
+    onFolderChange: useCallback(() => {
+      // Trigger refresh when folder changes to reload file list
+      setRefreshTrigger((prev) => prev + 1);
+    }, [])
+  });
 
   const handleFileUploadSuccess = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  const handleFolderChange = useCallback(
-    (folderId: string | null, path?: Array<{ id: string; name: string }>) => {
-      setCurrentFolder(folderId);
-      if (path) {
-        // Convert the path to FolderData format
-        const folderDataPath: FolderData[] = path.map(folder => ({
-          id: folder.id,
-          name: folder.name,
-          parentId: null // We can set this later if needed
-        }));
-        setFolderPath(folderDataPath);
-      } else {
-        setFolderPath([]);
-      }
-    },
-    [currentFolder, folderPath]
-  );
+  // Create wrapper for item click to match FileList interface
+  const handleItemClick = useCallback((file: FileType, event: React.MouseEvent) => {
+    const openFileViewer = (file: any) => {
+      const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/${file.path}`;
+      window.open(optimizedUrl, "_blank");
+    };
+    
+    navigation.handleItemClick(file, openFileViewer, event);
+  }, [navigation]);
 
   return (
     <>
@@ -101,7 +110,7 @@ export default function FileSection({ userId }: FileSectionProps) {
               <FileUploadForm
                 userId={userId}
                 onUploadSuccess={handleFileUploadSuccess}
-                currentFolder={currentFolder}
+                currentFolder={navigation.currentFolder}
               />
             </CardContent>
           </Card>
@@ -117,8 +126,17 @@ export default function FileSection({ userId }: FileSectionProps) {
               <FileList
                 userId={userId}
                 refreshTrigger={refreshTrigger}
-                currentFolder={currentFolder}
-                onFolderChange={handleFolderChange}
+                currentFolder={navigation.currentFolder}
+                folderPath={navigation.folderPath}
+                onFolderChange={() => {
+                  // The FileSection navigation hook handles URL updates automatically
+                  // Just trigger refresh for the file list
+                  setRefreshTrigger((prev) => prev + 1);
+                }}
+                onNavigateToFolder={navigation.navigateToFolder}
+                onNavigateUp={navigation.navigateUp}
+                onNavigateToPathFolder={navigation.navigateToPathFolder}
+                onItemClick={handleItemClick}
               />
             </CardContent>
           </Card>

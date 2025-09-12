@@ -1,31 +1,29 @@
 "use client";
 
 import FileActionButtons from "@/components/FileActionButtons";
-import FileActions from "@/components/FileActions";
 import FileTabs from "@/components/FileTabs";
+import { useFileOperations } from "@/hooks/useFileOperations";
 import axios from "axios";
-import { formatDistanceToNow } from "date-fns";
-import { Home, Star, Trash, X } from "lucide-react";
+import { Home } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import ConfirmationModal from "./ConfirmationModal";
 import FileEmptyState from "./FileEmptyState";
-import FileIcon from "./FileIcon";
+import FileModals from "./FileModals";
+import FileTableRow from "./FileTableRow";
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "./ui/breadcrumb";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "./ui/table";
 
 
@@ -58,21 +56,28 @@ interface FileListProps {
   userId: string;
   refreshTrigger?: number;
   currentFolder?: string | null;
+  folderPath?: Array<{ id: string; name: string }>;
   onFolderChange?: (folderId: string | null, path?: Array<{ id: string; name: string }>) => void;
+  onNavigateToFolder?: (folderId: string, folderName: string) => void;
+  onNavigateUp?: () => void;
+  onNavigateToPathFolder?: (index: number) => void;
+  onItemClick?: (file: FileType, event: React.MouseEvent) => void;
 }
 
 export default function FileList({
   userId,
   refreshTrigger = 0,
   currentFolder = null,
+  folderPath = [],
   onFolderChange,
+  onNavigateToFolder,
+  onNavigateUp,
+  onNavigateToPathFolder,
+  onItemClick,
 }: FileListProps) {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [folderPath, setFolderPath] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
 
   // Modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -125,233 +130,51 @@ export default function FileList({
     return files.filter((file) => file.isStarred && !file.isInTrash).length;
   }, [files]);
 
-  const handleStarFile = async (fileId: string) => {
-    try {
-      const response = await axios.patch(`/api/files/${fileId}/star`);
+  // Use custom hooks (after state calculations)
+  const fileOperations = useFileOperations({ files, setFiles, trashCount });
 
-      // Update local state using the response data
-      setFiles(
-        files.map((file) =>
-          file.id === fileId ? { ...file, isStarred: response.data.isStarred } : file
-        )
-      );
-
-      // Show toast
-      const file = files.find((f) => f.id === fileId);
-      toast.success(`${response.data.isStarred ? "Added to Starred" : "Removed from Starred"}. "${file?.name}" has been ${
-        response.data.isStarred ? "added to" : "removed from"
-      } your starred files`);
-    } catch (error) {
-      console.error("Error starring file:", error);
-      toast.error("Action Failed. We couldn't update the star status. Please try again.");
-    }
+  // Function to open file viewer
+  const openFileViewer = (file: FileType) => {
+    const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/${file.path}`;
+    window.open(optimizedUrl, "_blank");
   };
 
-  const handleTrashFile = async (fileId: string) => {
-    try {
-      const response = await axios.patch(`/api/files/${fileId}/trash`);
-      const responseData = response.data;
-
-      // Update local state using the response data
-      setFiles(
-        files.map((file) =>
-          file.id === fileId ? { ...file, isInTrash: responseData.isInTrash } : file
-        )
-      );
-
-      // Show toast
-      const file = files.find((f) => f.id === fileId);
-      toast.success(`${responseData.isInTrash ? "Moved to Trash" : "Restored from Trash"}. "${file?.name}" has been ${
-        responseData.isInTrash ? "moved to trash" : "restored"
-      }`);
-    } catch (error) {
-      console.error("Error trashing file:", error);
-      toast.error("Action Failed. We couldn't update the file status. Please try again.");
-    }
-  };
-
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      // Store file info before deletion for the toast message
-      const fileToDelete = files.find((f) => f.id === fileId);
-      const fileName = fileToDelete?.name || "File";
-
-      // Send delete request
-      const response = await axios.delete(`/api/files/${fileId}/delete`);
-
-      if (response.data.success) {
-        // Remove file from local state
-        setFiles(files.filter((file) => file.id !== fileId));
-
-        // Show success toast
-        toast.success(`File Permanently Deleted. "${fileName}" has been permanently removed`);
-
-        // Close modal if it was open
-        setDeleteModalOpen(false);
-      } else {
-        throw new Error(response.data.error || "Failed to delete file");
-      }
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      toast.error("Deletion Failed. We couldn't delete the file. Please try again later.");
-    }
-  };
-
-  const handleEmptyTrash = async () => {
-    try {
-      await axios.delete(`/api/files/empty-trash`);
-
-      // Remove all trashed files from local state
-      setFiles(files.filter((file) => !file.isInTrash));
-
-      // Show toast
-      toast.success(`Trash Emptied. All ${trashCount} items have been permanently deleted`);
-
-      // Close modal
-      setEmptyTrashModalOpen(false);
-    } catch (error) {
-      console.error("Error emptying trash:", error);
-      toast.error("Action Failed. We couldn't empty the trash. Please try again later.");
-    }
-  };
-
-  // Add this function to handle file downloads
-  const handleDownloadFile = async (file: any) => {
-    try {
-      // Show loading toast
-      toast.loading(`Preparing Download. Getting "${file.name}" ready for download...`);
-
-      // For images, we can use the ImageKit URL directly with optimized settings
-      if (file.type.startsWith("image/")) {
-        // Create a download-optimized URL with ImageKit
-        // Using high quality and original dimensions for downloads
-        const downloadUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/tr:q-100,orig-true/${file.path}`;
-
-        // Fetch the image first to ensure it's available
-        const response = await fetch(downloadUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to download image: ${response.statusText}`);
-        }
-
-        // Get the blob data
-        const blob = await response.blob();
-
-        // Create a download link
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = file.name;
-        document.body.appendChild(link);
-
-        // Remove loading toast and show success toast
-        toast.success(`Download Ready. "${file.name}" is ready to download.`);
-
-        // Trigger download
-        link.click();
-
-        // Clean up
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      } else {
-        // For other file types, use the fileUrl directly
-        const response = await fetch(file.fileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to download file: ${response.statusText}`);
-        }
-
-        // Get the blob data
-        const blob = await response.blob();
-
-        // Create a download link
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = file.name;
-        document.body.appendChild(link);
-
-        // Remove loading toast and show success toast
-        toast.success(`Download Ready. "${file.name}" is ready to download.`);
-
-        // Trigger download
-        link.click();
-
-        // Clean up
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      }
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      toast.error("Download Failed. We couldn't download the file. Please try again later.");
-    }
-  };
-
-  // Function to open image in a new tab with optimized view
-  const openFileViewer = (file: any) => {
-    // if (file.type.startsWith("image/")) {
-      // Create an optimized URL with ImageKit transformations for viewing
-      // Using higher quality and responsive sizing for better viewing experience
-      const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/${file.path}`;
-      window.open(optimizedUrl, "_blank");
-    // }
-  };
-
-  // Navigate to a folder
-  const navigateToFolder = (folderId: string, folderName: string) => {
-    const newPath = [...folderPath, { id: folderId, name: folderName }];
-    setFolderPath(newPath);
-
-    // Notify parent component about folder change
-    if (onFolderChange) {
-      onFolderChange(folderId, newPath);
-    }
-  };
-
-  // Navigate back to parent folder
-  const navigateUp = () => {
-    if (folderPath.length > 0) {
-      const newPath = [...folderPath];
-      newPath.pop();
-      setFolderPath(newPath);
-      const newFolderId =
-        newPath.length > 0 ? newPath[newPath.length - 1].id : null;
-
-      // Notify parent component about folder change
-      if (onFolderChange) {
-        onFolderChange(newFolderId, newPath);
-      }
-    }
-  };
-
-  // Navigate to specific folder in path
-  const navigateToPathFolder = (index: number) => {
-    if (index < 0) {
-      setFolderPath([]);
-
-      // Notify parent component about folder change
-      if (onFolderChange) {
-        onFolderChange(null, []);
-      }
+  // Handle item click wrapper
+  const handleItemClick = (file: FileType, event: React.MouseEvent) => {
+    if (onItemClick) {
+      onItemClick(file, event);
     } else {
-      const newPath = folderPath.slice(0, index + 1);
-      setFolderPath(newPath);
-      const newFolderId = newPath[newPath.length - 1].id;
-
-      // Notify parent component about folder change
-      if (onFolderChange) {
-        onFolderChange(newFolderId, newPath);
+      // Fallback behavior
+      event.preventDefault();
+      event.stopPropagation();
+      if (file.isFolder && onNavigateToFolder) {
+        onNavigateToFolder(file.id, file.name);
+      } else {
+        // Open file viewer
+        const optimizedUrl = `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}/${file.path}`;
+        window.open(optimizedUrl, "_blank");
       }
     }
   };
 
-  // Handle file or folder click
-  const handleItemClick = (file: any, event: React.MouseEvent ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (file.isFolder) {
-      navigateToFolder(file.id, file.name);
-    } else{
-      openFileViewer(file);
+  // Handle delete file with modal
+  const handleDeleteWithModal = (file: FileType) => {
+    setSelectedFile(file);
+    setDeleteModalOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = () => {
+    if (selectedFile) {
+      fileOperations.handleDeleteFile(selectedFile.id);
+      setDeleteModalOpen(false);
     }
+  };
+
+  // Handle empty trash confirmation
+  const handleConfirmEmptyTrash = () => {
+    fileOperations.handleEmptyTrash();
+    setEmptyTrashModalOpen(false);
   };
 
   if (loading) {
@@ -373,9 +196,10 @@ export default function FileList({
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink
-                onClick={() => navigateToPathFolder(-1)}
+                onClick={() => onNavigateToPathFolder && onNavigateToPathFolder(-1)}
                 className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
-              ><Home className="h-4 w-4 mr-1 inline-block" />
+              >
+                <Home className="h-4 w-4 mr-1 inline-block" />
                 Home
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -389,7 +213,7 @@ export default function FileList({
                     </BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink
-                      onClick={() => navigateToPathFolder(index)}
+                      onClick={() => onNavigateToPathFolder && onNavigateToPathFolder(index)}
                       className="cursor-pointer text-muted-foreground hover:text-foreground"
                     >
                       {folder.name}
@@ -428,111 +252,31 @@ export default function FileList({
             </TableHeader>
             <TableBody>
               {filteredFiles.map((file) => (
-                <TableRow
+                <FileTableRow
                   key={file.id}
-                  className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
-                    file.isFolder || file
-                      ? "cursor-pointer"
-                      : ""
-                  }`}
-                  onClick={(event) => handleItemClick(file, event)}
-                >
-                  <TableCell className="py-3">
-                    <div className="flex items-center gap-3">
-                      <FileIcon file={file} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground truncate">
-                            {file.name}
-                          </span>
-                          {file.isStarred && (
-                            <Star
-                              className="h-3.5 w-3.5 text-yellow-500 fill-current flex-shrink-0"
-                            />
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
-                          {formatDistanceToNow(new Date(file.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {file.isFolder ? "Folder" : file.type.split('/')[0]}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {file.isFolder
-                        ? "—"
-                        : file.size < 1024
-                          ? `${file.size} B`
-                          : file.size < 1024 * 1024
-                            ? `${(file.size / 1024).toFixed(1)} KB`
-                            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell py-3">
-                    <span className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(file.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()} className="text-right py-3">
-                    <FileActions
-                      file={file}
-                      onStar={handleStarFile}
-                      onTrash={handleTrashFile}
-                      onDelete={(file) => {
-                        setSelectedFile(file);
-                        setDeleteModalOpen(true);
-                      }}
-                      onDownload={handleDownloadFile}
-                    />
-                  </TableCell>
-                </TableRow>
+                  file={file}
+                  onItemClick={handleItemClick}
+                  onStar={fileOperations.handleStarFile}
+                  onTrash={fileOperations.handleTrashFile}
+                  onDelete={handleDeleteWithModal}
+                  onDownload={fileOperations.handleDownloadFile}
+                />
               ))}
             </TableBody>
           </Table>
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={deleteModalOpen}
-        onOpenChange={setDeleteModalOpen}
-        title="Confirm Permanent Deletion"
-        description={`Are you sure you want to permanently delete this file?`}
-        icon={X}
-        iconColor="text-red-600"
-        confirmText="Delete Permanently"
-        confirmVariant="destructive"
-        onConfirm={() => {
-          if (selectedFile) {
-            handleDeleteFile(selectedFile.id);
-          }
-        }}
-        isDangerous={true}
-        warningMessage={`You are about to permanently delete "${selectedFile?.name}". This file will be permanently removed from your account and cannot be recovered.`}
+      <FileModals
+        deleteModalOpen={deleteModalOpen}
+        emptyTrashModalOpen={emptyTrashModalOpen}
+        selectedFile={selectedFile}
+        trashCount={trashCount}
+        onDeleteModalChange={setDeleteModalOpen}
+        onEmptyTrashModalChange={setEmptyTrashModalOpen}
+        onConfirmDelete={handleConfirmDelete}
+        onConfirmEmptyTrash={handleConfirmEmptyTrash}
       />
-     
-      <ConfirmationModal
-        isOpen={emptyTrashModalOpen}
-        onOpenChange={setEmptyTrashModalOpen}
-        title="Empty Trash"
-        description={`Are you sure you want to empty the trash?`}
-        icon={Trash}
-        iconColor="text-red-600"
-        confirmText="Empty Trash"
-        confirmVariant="destructive"
-        onConfirm={handleEmptyTrash}
-        isDangerous={true}
-        warningMessage={`You are about to permanently delete all ${trashCount} items in your trash. These files will be permanently removed from your account and cannot be recovered.`}
-      />
-     
     </div>
   );
 }
