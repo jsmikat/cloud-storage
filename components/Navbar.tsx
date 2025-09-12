@@ -210,14 +210,6 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
-            <SignedIn>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.imageUrl || undefined} />
-                <AvatarFallback>
-                  {userDetails.initials}
-                </AvatarFallback>
-              </Avatar>
-            </SignedIn>
             <button
               className="z-50 p-2"
               onClick={toggleMobileMenu}
@@ -290,7 +282,7 @@ export default function Navbar({ user }: NavbarProps) {
                 </div>
 
                 {/* Navigation links */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
                   { (
                     <Link
                       href="/dashboard"
@@ -308,7 +300,7 @@ export default function Navbar({ user }: NavbarProps) {
                     Profile
                   </Link>
                   <button
-                    className="py-2 px-3 text-left text-destructive hover:bg-destructive/10 rounded-md transition-colors mt-4"
+                    className="py-2 px-3 text-left text-destructive hover:bg-destructive/10 rounded-md transition-colors mt-2"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       handleSignOut();
